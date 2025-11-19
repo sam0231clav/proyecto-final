@@ -1,0 +1,169 @@
+/* Paleta Final: Azul Marino Profundo (#1C3B4E), Gris Acero (#455A64), Fondo Claro (#F4F6F9) */
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+    font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+}
+
+body { 
+    background: #F4F6F9; /* Fondo Gris Muy Claro */
+    line-height: 1.6;
+    color: #212121; /* Texto Principal */
+}
+
+.container { 
+    max-width: 960px; 
+    margin: 0 auto; 
+    padding: 20px; 
+}
+
+/* --- HEADER Y PROBLEMA (Azul Marino Profundo) --- */
+.header { 
+    background: #1C3B4E; /* AZUL MARINO PROFUNDO */
+    color: white; 
+    padding: 35px 0; 
+    text-align: center; 
+    margin-bottom: 25px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+}
+
+.header h1 {
+    font-size: 2.4em;
+    margin-bottom: 5px;
+}
+
+.problema { 
+    font-size: 1.1em; 
+    opacity: 0.9;
+    font-weight: 300;
+}
+
+/* --- TARJETAS --- */
+.card { 
+    background: #FFFFFF; 
+    padding: 40px; 
+    border-radius: 10px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+    margin: 30px 0; 
+    border-top: 5px solid #1C3B4E; 
+}
+.card h2 {
+    color: #1C3B4E;
+    margin-bottom: 20px;
+}
+
+/* --- FORMULARIOS --- */
+input, select, textarea { 
+    width: 100%; 
+    padding: 14px 15px; 
+    margin: 12px 0; 
+    border: 1px solid #ddd; 
+    border-radius: 6px; 
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+input:focus, select:focus, textarea:focus {
+    border-color: #1C3B4E;
+    outline: none;
+}
+
+/* --- BOTONES DE ACCIÓN (Gris Acero) --- */
+button { 
+    width: 100%; 
+    padding: 15px; 
+    margin: 12px 0; 
+    border: none; 
+    border-radius: 6px;
+    cursor: pointer; 
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+/* Botones principales (Submit, Publicar, Entrar, Postularme) */
+.btn-primary, button[type="submit"], .btn-postular {
+    background: #455A64; /* GRIS ACERO (Acción) */
+    color: white; 
+    font-size: 18px;
+}
+
+.btn-primary:hover, button[type="submit"]:hover, .btn-postular:hover { 
+    background: #37474F; 
+}
+
+/* Estilos específicos para Postularme (Ajuste de margen y tamaño) */
+.btn-postular { 
+    width: 100%; 
+    padding: 12px;
+    font-size: 16px;
+    margin-top: 15px !important;
+} 
+
+/* Botón Cancelar */
+.btn-cancelar { 
+    background: #90A4AE; /* Gris Claro */
+    margin-top: 10px;
+    font-size: 16px;
+    color: #212121;
+} 
+.btn-cancelar:hover { 
+    background: #78909C;
+}
+
+.link { 
+    text-align: center; 
+    margin-top: 20px; 
+    font-size: 15px;
+}
+
+.hidden { 
+    display: none;
+}
+
+/* --- OFERTAS CARDS --- */
+.oferta-card { 
+    background: #FFFFFF; 
+    padding: 25px; 
+    margin: 18px 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    border-left: 5px solid #455A64; /* Detalle Gris Acero */
+}
+
+.oferta-card h4 {
+    color: #1C3B4E;
+    margin-bottom: 5px;
+    font-size: 1.3em;
+}
+
+.oferta-card p {
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.oferta-card strong {
+    color: #455A64; 
+}
+
+.oferta-card small {
+    display: block;
+    color: #888;
+    margin-top: 10px;
+    font-size: 0.85em;
+}
+
+/* --- LOGOUT (Gris por defecto, Rojo al hacer hover) --- */
+.btn-logout { 
+    background: #90A4AE; /* Gris por defecto */
+    width: auto;
+    float: right; 
+    padding: 8px 18px; 
+    font-size: 14px;
+    margin-top: 0;
+    color: #212121;
+}
+
+.btn-logout:hover { 
+    background: #B33A3A; /* ROJO Ladrillo Suave en hover */
+    color: white;
+}
