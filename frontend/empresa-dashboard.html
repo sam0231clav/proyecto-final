@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel Empresa | Empleo CE</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 700px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .close-modal {
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #aaa;
+    }
+    .close-modal:hover { color: #000; }
+    .candidato-item {
+      border-left: 5px solid orange;
+      padding: 15px;
+      margin: 15px 0;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+    .estado-pendiente { border-left-color: orange; }
+    .estado-aceptada { border-left-color: green; }
+    .estado-rechazada { border-left-color: red; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <h1>Panel de Empresa</h1>
+      <p>Bienvenido <strong id="empresa-nombre"></strong></p>
+      <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <button class="btn-primary" onclick="toggleForm()">+ Publicar Nueva Oferta</button>
+
+    <div id="form-oferta" class="card hidden">
+      <h3>Nueva Oferta de Empleo</h3>
+      <form id="nueva-oferta">
+        <input type="text" id="titulo" placeholder="Título del cargo" required />
+        <input type="text" id="empresa" placeholder="Nombre de la empresa" required />
+        <select id="municipio" required>
+          <option value="">Selecciona municipio</option>
+          <option>Villavicencio</option><option>Restrepo</option><option>Cumaral</option>
+          <option>Acacías</option><option>Guamal</option><option>San Martín</option><option>Granada</option>
+        </select>
+        <textarea id="descripcion" placeholder="Descripción, requisitos, salario, beneficios..." required></textarea>
+        <button type="submit">Publicar Oferta</button>
+        <button type="button" onclick="toggleForm()" class="btn-cancelar">Cancelar</button>
+      </form>
+    </div>
+
+    <h2>Mis Ofertas Publicadas</h2>
+    <div id="mis-ofertas">Cargando ofertas...</div>
+  </main>
+
+  <!-- MODAL PARA VER CANDIDATOS -->
+  <div id="modal-postulantes" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="cerrarModal()">&times;</span>
+      <h3 id="modal-titulo">Postulantes</h3>
+      <div id="lista-candidatos">Cargando...</div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+    
+    if (!token || usuario.tipo !== 'empresa') {
+      alert('Acceso restringido');
+      window.location.href = 'index.html';
+    }
+    document.getElementById('empresa-nombre').textContent = usuario.razon_social || usuario.nombre;
+
+    function toggleForm() {
+      document.getElementById('form-oferta').classList.toggle('hidden');
+    }
+
+    async function cargarMisOfertas() {
+      const res = await fetch('/mis-ofertas', { headers: { 'Authorization': `Bearer ${token}` } });
+      const ofertas = await res.json();
+      const cont = document.getElementById('mis-ofertas');
+      
+      if (ofertas.length === 0) {
+        cont.innerHTML = '<p style="text-align:center; color:#666">Aún no has publicado ofertas.</p>';
+        return;
+      }
+
+      cont.innerHTML = ofertas.map(o => `
+        <div class="oferta-card">
+          <h4>${o.titulo}</h4>
+          <p><strong>${o.empresa}</strong> - ${o.municipio}</p>
+          <p>${o.descripcion}</p>
+          <small>Publicado el ${new Date(o.fecha).toLocaleDateString()}</small>
+          <div style="margin-top:15px">
+            <button class="btn-postular" onclick="verPostulantes(${o.id}, '${o.titulo}')" style="background:#1C3B4E">
+              Ver Postulantes
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ABRIR MODAL CON POSTULANTES
+    async function verPostulantes(idOferta, tituloOferta) {
+      document.getElementById('modal-titulo').textContent = `Postulantes - ${tituloOferta}`;
+      document.getElementById('modal-postulantes').style.display = 'flex';
+      
+      const res = await fetch(`/postulaciones-oferta/${idOferta}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const candidatos = await res.json();
+
+      const lista = document.getElementById('lista-candidatos');
+      if (candidatos.length === 0) {
+        lista.innerHTML = '<p style="text-align:center; color:#999">Ningún candidato se ha postulado aún.</p>';
+        return;
+      }
+
+      lista.innerHTML = candidatos.map(c => {
+        const color = c.estado === 'aceptada' ? '#4CAF50' : c.estado === 'rechazada' ? '#F44336' : '#FF9800';
+        const clase = c.estado === 'aceptada' ? 'estado-aceptada' : c.estado === 'rechazada' ? 'estado-rechazada' : 'estado-pendiente';
+        
+        return `
+          <div class="candidato-item ${clase}">
+            <strong>${c.nombre}</strong><br>
+            <small>${c.correo} • ${c.municipio}</small><br>
+            <small>Postulado: ${new Date(c.fecha_postulacion).toLocaleString()}</small>
+            <div style="margin-top:10px">
+              <button onclick="cambiarEstado(${c.id}, 'aceptada', this)" 
+                      ${c.estado !== 'pendiente' ? 'disabled' : ''} 
+                      style="background:#4CAF50;color:white;padding:8px 15px;border:none;border-radius:5px;margin:5px">
+                Aceptar
+              </button>
+              <button onclick="cambiarEstado(${c.id}, 'rechazada', this)" 
+                      ${c.estado !== 'pendiente' ? 'disabled' : ''} 
+                      style="background:#F44336;color:white;padding:8px 15px;border:none;border-radius:5px;margin:5px">
+                Rechazar
+              </button>
+              <strong style="margin-left:15px; color:${color}">
+                ${c.estado.toUpperCase()}
+              </strong>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // CAMBIAR ESTADO (ACEPTAR / RECHAZAR)
+    async function cambiarEstado(idPostulacion, nuevoEstado, boton) {
+      if (!confirm(`¿Estás seguro de ${nuevoEstado === 'aceptada' ? 'ACEPTAR' : 'RECHAZAR'} esta postulación?`)) return;
+
+      boton.disabled = true;
+      boton.textContent = 'Procesando...';
+
+      const res = await fetch(`/postulacion/${idPostulacion}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ estado: nuevoEstado })
+      });
+
+      if (res.ok) {
+        alert(`¡Postulación ${nuevoEstado === 'aceptada' ? 'ACEPTADA' : 'RECHAZADA'} correctamente!`);
+        // Actualiza solo ese candidato sin recargar todo
+        const item = boton.closest('.candidato-item');
+        item.className = `candidato-item estado-${nuevoEstado}`;
+        item.querySelector('strong:last-child').textContent = nuevoEstado.toUpperCase();
+        item.querySelector('strong:last-child').style.color = nuevoEstado === 'aceptada' ? '#4CAF50' : '#F44336';
+        item.querySelectorAll('button').forEach(b => b.disabled = true);
+      } else {
+        alert('Error al actualizar');
+        boton.disabled = false;
+        boton.textContent = nuevoEstado === 'aceptada' ? 'Aceptar' : 'Rechazar';
+      }
+    }
+
+    function cerrarModal() {
+      document.getElementById('modal-postulantes').style.display = 'none';
+    }
+
+    // CERRAR MODAL AL HACER CLIC FUERA
+    window.onclick = function(e) {
+      const modal = document.getElementById('modal-postulantes');
+      if (e.target === modal) cerrarModal();
+    }
+
+    // PUBLICAR NUEVA OFERTA
+    document.getElementById('nueva-oferta').onsubmit = async (e) => {
+      e.preventDefault();
+      const datos = {
+        titulo: document.getElementById('titulo').value,
+        empresa: document.getElementById('empresa').value,
+        municipio: document.getElementById('municipio').value,
+        descripcion: document.getElementById('descripcion').value
+      };
+
+      const res = await fetch('/ofertas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(datos)
+      });
+
+      const data = await res.json();
+      alert(data.message || data.error);
+      if (res.ok) {
+        document.getElementById('nueva-oferta').reset();
+        toggleForm();
+        cargarMisOfertas();
+      }
+    };
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'index.html';
+    }
+
+    // CARGAR AL INICIO
+    cargarMisOfertas();
+  </script>
+</body>
+</html>

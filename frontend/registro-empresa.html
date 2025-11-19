@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro Empresa</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <h1>Empleo Corredor Ecológico</h1>
+    </div>
+  </header>
+  <main class="container">
+    <div class="card">
+      <h2>Registro de Empresa</h2>
+      <form id="register-form">
+        <input type="text" id="razon_social" placeholder="Razón Social" required />
+        <input type="text" id="nit" placeholder="NIT (sin puntos ni guiones)" required />
+        <input type="email" id="email" placeholder="Correo empresarial" required />
+        <input type="password" id="password" placeholder="Contraseña" required />
+        <input type="text" id="telefono" placeholder="Teléfono" required />
+        <select id="municipio" required>
+          <option value="">Selecciona municipio</option>
+          <option>Villavicencio</option><option>Restrepo</option><option>Cumaral</option>
+          <option>Acacías</option><option>Guamal</option><option>San Martín</option><option>Granada</option>
+        </select>
+        <button type="submit">Registrar Empresa</button>
+      </form>
+      <p class="link"><a href="login-empresa.html">¿Ya tienes cuenta? Inicia sesión</a></p>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('register-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const datos = {
+        razon_social: document.getElementById('razon_social').value,
+        nit: document.getElementById('nit').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+        telefono: document.getElementById('telefono').value,
+        municipio: document.getElementById('municipio').value
+      };
+
+      const res = await fetch('/registro/empresa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos)
+      });
+
+      const data = await res.json();
+      if (data.message) {
+        alert('Empresa registrada con éxito. Ahora inicia sesión.');
+        window.location.href = 'login-empresa.html';
+      } else {
+        alert(data.error);
+      }
+    };
+  </script>
+</body>
+</html>

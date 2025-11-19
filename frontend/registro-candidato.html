@@ -3,62 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Registro | Empleo CE</title>
+  <title>Registro Candidato</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="header">
     <div class="container">
-      <h1>Empleo Corredor Ecológico Meta</h1>
-      <p class="problema">
-        <strong>Combatiendo el desempleo en el Corredor Ecológico del Meta</strong>
-      </p>
+      <h1>Empleo Corredor Ecológico</h1>
     </div>
   </header>
-
   <main class="container">
     <div class="card">
-      <h2>Registro (Solo residentes del Corredor Ecológico)</h2>
+      <h2>Registro de Candidato</h2>
       <form id="register-form">
         <input type="text" id="nombre" placeholder="Nombre completo" required />
         <input type="email" id="correo" placeholder="Correo" required />
         <input type="password" id="contra" placeholder="Contraseña" required />
         <select id="municipio" required>
           <option value="">Selecciona tu municipio</option>
-          <option>Villavicencio</option>
-          <option>Restrepo</option>
-          <option>Cumaral</option>
-          <option>Acacías</option>
-          <option>Guamal</option>
-          <option>San Martín</option>
-          <option>Granada</option>
+          <option>Villavicencio</option><option>Restrepo</option><option>Cumaral</option>
+          <option>Acacías</option><option>Guamal</option><option>San Martín</option><option>Granada</option>
         </select>
         <button type="submit">Registrarse</button>
       </form>
-      <p class="link">
-        ¿Ya tienes cuenta? <a href="index.html">Inicia sesión</a>
-      </p>
+      <p class="link"><a href="login-candidato.html">¿Ya tienes cuenta? Inicia sesión</a></p>
     </div>
   </main>
 
   <script>
     document.getElementById('register-form').onsubmit = async (e) => {
       e.preventDefault();
-      const nombre = document.getElementById('nombre').value;
-      const correo = document.getElementById('correo').value;
-      const contra = document.getElementById('contra').value;
-      const municipio = document.getElementById('municipio').value;
+      const datos = {
+        nombre: document.getElementById('nombre').value,
+        correo: document.getElementById('correo').value,
+        contra: document.getElementById('contra').value,
+        municipio: document.getElementById('municipio').value
+      };
 
-      const res = await fetch('/registro', {
+      const res = await fetch('/registro/candidato', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, correo, contra, municipio })
+        body: JSON.stringify(datos)
       });
 
       const data = await res.json();
       if (data.message) {
         alert('¡Registro exitoso! Ahora inicia sesión.');
-        window.location.href = 'index.html'; // ← REDIRECCIÓN A LOGIN
+        window.location.href = 'login-candidato.html';
       } else {
         alert(data.error);
       }

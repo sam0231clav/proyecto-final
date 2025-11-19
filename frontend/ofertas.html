@@ -1,171 +1,72 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ofertas | Empleo CE</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ofertas | Empleo CE</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <header class="header">
-    <div class="container">
-      <h1>Empleo Corredor Ecológico Meta</h1>
-      <p class="problema">
-        <strong>Combatiendo el desempleo en el Corredor Ecológico</strong>
-      </p>
-      <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
-    </div>
-  </header>
+  <header class="header">
+    <div class="container">
+      <h1>Empleo Corredor Ecológico</h1>
+      <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+    </div>
+  </header>
 
-  <main class="container">
-    <h2>Oportunidades Laborales</h2>
+  <main class="container">
+    <h2>Oportunidades Laborales</h2>
+    <div id="lista-ofertas">Cargando...</div>
+  </main>
 
-        <button class="btn-primary" onclick="toggleForm()">Publicar Oferta</button>
-    
-    <div id="form-oferta" class="card hidden">
-      <h3>Nueva Oferta de Empleo</h3>
-      <form id="nueva-oferta-form">
-        <input type="text" id="titulo" placeholder="Título del cargo" required />
-        <input type="text" id="empresa" placeholder="Nombre de la empresa" required />
-        <select id="municipio" required>
-          <option value="">selecciona municipio</option>
-          <option>Villavicencio</option>
-          <option>Restrepo</option>
-          <option>Cumaral</option>
-          <option>Acacías</option>
-          <option>Guamal</option>
-          <option>San Martín</option>
-          <option>Granada</option>
-        </select>
-        <textarea id="descripcion" placeholder="descripción del cargo, requisitos, salario..." required></textarea>
-        <button type="submit">Publicar Oferta</button>
-        <button type="button" onclick="toggleForm()" class="btn-cancelar">Cancelar</button>
-      </form>
-    </div>
-            <div id="lista-ofertas">Cargando...</div>
-  </main>
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'index.html';
 
-  <script>
-    // verifica login y obtiene token
-    const token = localStorage.getItem('token');
-    if (!token) window.location.href = 'index.html';
+    async function cargarOfertas() {
+      const res = await fetch('/ofertas', { headers: { 'Authorization': `Bearer ${token}` } });
+      const ofertas = await res.json();
+      const lista = document.getElementById('lista-ofertas');
 
-    // función para postular al usuario a una oferta
-    async function postularme(ofertaId) {
-        if (!confirm('¿estás seguro de que quieres postularte a esta oferta?')) return;
+      if (ofertas.length === 0) {
+        lista.innerHTML = '<p>No hay ofertas disponibles.</p>';
+        return;
+      }
 
-        const res = await fetch('/postulaciones', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
-            },
-            body: JSON.stringify({ id_oferta: ofertaId })
-        });
-
-        const result = await res.json();
-        if (res.ok) {
-            alert('¡postulación exitosa! la empresa se comunicará contigo.');
-            
-            // deshabilita el botón de postulación
-            const btn = document.querySelector(`button[data-id="${ofertaId}"]`);
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = 'postulado';
-                btn.style.opacity = '0.6';
-            }
-        } else {
-            alert('error al postularme: ' + (result.error || 'intenta de nuevo.'));
-        }
+      lista.innerHTML = ofertas.map(o => `
+        <div class="oferta-card">
+          <h4>${o.titulo}</h4>
+          <p><strong>${o.empresa}</strong> - ${o.municipio}</p>
+          <p>${o.descripcion}</p>
+          <small>Publicado: ${new Date(o.fecha).toLocaleDateString()}</small>
+          ${o.estado_postulacion ? 
+            `<p style="margin-top:10px; font-weight:bold; color:${o.estado_postulacion==='aceptada'?'green':o.estado_postulacion==='rechazada'?'red':'orange'}">
+              Estado: ${o.estado_postulacion.toUpperCase()}
+            </p>` : 
+            `<button class="btn-postular" onclick="postularme(${o.id})">Postularme</button>`
+          }
+        </div>
+      `).join('');
     }
 
-    // carga ofertas desde el servidor
-    async function cargarOfertas() {
-      const res = await fetch('/ofertas', {
-        headers: { 
-          'Authorization': `Bearer ${token}` 
-        }
-      });
-      const ofertas = await res.json();
-      const lista = document.getElementById('lista-ofertas');
-      
-      if (ofertas.error) {
-        lista.innerHTML = '<p style="color: #D32F2F;">❌ error al cargar ofertas: ' + ofertas.error + '</p>';
-        return;
-      }
-      
-      if (ofertas.length === 0) {
-        lista.innerHTML = '<p>no hay ofertas publicadas aún.</p>';
-      } else {
-        // mapea y renderiza las ofertas con el botón de postulación
-        lista.innerHTML = ofertas.map(o => `
-          <div class="oferta-card">
-            <h4>${o.titulo}</h4>
-            <p><strong>${o.empresa}</strong> - ${o.municipio}</p>
-            <p>${o.descripcion}</p>
-            <small>publicado el: ${new Date(o.fecha || Date.now()).toLocaleDateString()}</small>
-            <button class="btn-postular" onclick="postularme(${o.id})" data-id="${o.id}">postularme</button>
-          </div>
-        `).join('');
-      }
-    }
+    async function postularme(id) {
+      if (!confirm('¿Postularte a esta oferta?')) return;
+      const res = await fetch('/postulaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ id_oferta: id })
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+      cargarOfertas();
+    }
 
-    // muestra/oculta formulario de publicación
-    function toggleForm() {
-      const form = document.getElementById('form-oferta');
-      form.classList.toggle('hidden');
-    }
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'index.html';
+    }
 
-    // envía nueva oferta (función asociada al botón "publicar oferta")
-    document.getElementById('nueva-oferta-form').onsubmit = async (e) => {
-      e.preventDefault(); // evita la recarga de la página
-      
-      const datos = {
-        titulo: document.getElementById('titulo').value,
-        empresa: document.getElementById('empresa').value,
-        municipio: document.getElementById('municipio').value,
-        descripcion: document.getElementById('descripcion').value
-      };
-
-      try {
-            const res = await fetch('/ofertas', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // envía el token jwt
-                },
-                body: JSON.stringify(datos)
-            });
-
-            const result = await res.json();
-            if (res.ok) { 
-                alert('¡oferta publicada con éxito!');
-                document.getElementById('nueva-oferta-form').reset();
-                toggleForm();
-                cargarOfertas(); // recargar lista
-                
-                // hace scroll hacia la lista de ofertas para ver la nueva publicación
-                document.getElementById('lista-ofertas').scrollIntoView({ behavior: 'smooth' });
-
-            } else {
-                // muestra el error específico del servidor (401, 403, 500)
-                alert('error al publicar: ' + (result.error || 'problema en el servidor.'));
-            }
-        } catch (error) {
-            // error fatal de red si el servidor no está corriendo
-            console.error("error de conexión:", error);
-            alert("error de conexión: asegúrate que el servidor express está corriendo.");
-        }
-    };
-
-    // cierra sesión y limpia el almacenamiento local
-    function logout() {
-      localStorage.clear();
-      window.location.href = 'index.html';
-    }
-
-    // inicia la carga de ofertas
-    cargarOfertas();
-  </script>
+    cargarOfertas();
+  </script>
 </body>
 </html>

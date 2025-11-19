@@ -3,55 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Iniciar Sesión | Empleo CE</title>
+  <title>Empleo CE</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="header">
     <div class="container">
       <h1>Empleo Corredor Ecológico Meta</h1>
-      <p class="problema">
-        <strong>Combatiendo el desempleo (12.8%) en Villavicencio, Restrepo, Cumaral, Acacías, Guamal, San Martín y Granada</strong>
-      </p>
+      <p class="problema"><strong>Combatiendo el desempleo en la región</strong></p>
     </div>
   </header>
-
   <main class="container">
     <div class="card">
-      <h2>Iniciar Sesión</h2>
-      <form id="login-form">
-        <input type="email" id="correo" placeholder="Correo electrónico" required />
-        <input type="password" id="contra" placeholder="Contraseña" required />
-        <button type="submit">Entrar</button>
-      </form>
-      <p class="link">
-        ¿No tienes cuenta? <a href="registro.html">Regístrate aquí</a>
-      </p>
+      <h2>Selecciona tu tipo de cuenta</h2>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:40px;">
+        <div style="text-align:center">
+          <h3 style="color:#1C3B4E; margin-bottom:20px">Candidatos</h3>
+          <a href="login-candidato.html" class="btn-primary" style="display:block; padding:18px; margin:10px 0; font-size:18px">Iniciar Sesión</a>
+          <a href="registro-candidato.html" class="btn-primary" style="display:block; padding:18px; background:#455A64">Registrarse</a>
+        </div>
+        <div style="text-align:center">
+          <h3 style="color:#1C3B4E; margin-bottom:20px">Empresas</h3>
+          <a href="login-empresa.html" class="btn-primary" style="display:block; padding:18px; margin:10px 0; font-size:18px">Iniciar Sesión</a>
+          <a href="registro-empresa.html" class="btn-primary" style="display:block; padding:18px; background:#455A64">Registrarse</a>
+        </div>
+      </div>
     </div>
   </main>
-
-  <script>
-    document.getElementById('login-form').onsubmit = async (e) => {
-      e.preventDefault();
-      const correo = document.getElementById('correo').value;
-      const contra = document.getElementById('contra').value;
-
-      const res = await fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ correo, contra })
-      });
-
-      const data = await res.json();
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('usuario', JSON.stringify(data.usuario));
-        alert('¡Bienvenido!');
-        window.location.href = 'ofertas.html'; // ← REDIRECCIÓN A OFERTAS
-      } else {
-        alert(data.error || 'Error al iniciar sesión');
-      }
-    };
-  </script>
 </body>
 </html>

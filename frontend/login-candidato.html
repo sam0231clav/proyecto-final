@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login Candidato | Empleo CE</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <h1>Empleo Corredor Ecológico</h1>
+    </div>
+  </header>
+  <main class="container">
+    <div class="card">
+      <h2>Iniciar Sesión (Candidato)</h2>
+      <form id="login-form">
+        <input type="email" id="correo" placeholder="Correo electrónico" required />
+        <input type="password" id="contra" placeholder="Contraseña" required />
+        <button type="submit">Entrar</button>
+      </form>
+      <p class="link"><a href="registro-candidato.html">¿No tienes cuenta? Regístrate</a> | <a href="../index.html">Volver</a></p>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('login-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const correo = document.getElementById('correo').value;
+      const contra = document.getElementById('contra').value;
+
+      const res = await fetch('/login/candidato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correo, contra })
+      });
+
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('usuario', JSON.stringify(data.usuario));
+        alert('Bienvenido');
+        window.location.href = 'ofertas.html';
+      } else {
+        alert(data.error || 'Error al iniciar sesión');
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,160 +1,142 @@
 const express = require('express');
 const mysql = require('mysql2');
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const app = express();
 
 const SECRET_KEY = 'meta2025';
-
 app.use(express.json());
-
-// SIRVE frontend DESDE LA MISMA CARPETA
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// RUTA RAÍZ
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+const db = mysql.createConnection({
+    host: 'localhost', user: 'root', password: '1234', database: 'empleo_ce'
 });
 
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '1234',
-  database: 'empleo_ce'
-}); 
-
 db.connect(err => {
-  if (err) {
-    console.error('Error conectando a MySQL: ' + err.stack);
-    return;
-  }
-  console.log('Conectado a MySQL con ID ' + db.threadId);
+    if (err) console.error('Error MySQL:', err);
+    else console.log('MySQL conectado');
 });
 
 function verificarToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) return res.status(403).json({ error: 'Token no proporcionado' });
-
-    const token = authHeader.split(' ')[1];
-    if (!token) return res.status(403).json({ error: 'Formato de token incorrecto' });
-
+    const auth = req.headers['authorization'];
+    if (!auth || !auth.startsWith('Bearer ')) return res.status(403).json({ error: 'Token requerido' });
+    const token = auth.split(' ')[1];
     jwt.verify(token, SECRET_KEY, (err, decoded) => {
-        if (err) {
-            return res.status(401).json({ error: 'Token inválido o expirado' });
-        }
-        req.usuarioId = decoded.id; 
+        if (err) return res.status(401).json({ error: 'Token inválido' });
+        req.userId = decoded.id;
+        req.userType = decoded.tipo;
         next();
     });
 }
 
-// REGISTRO
-app.post('/registro', async (req, res) => {
-  const { nombre, correo, contra, municipio } = req.body;
-  const municipiosCE = ['Villavicencio','Restrepo','Cumaral','Acacías','Guamal','San Martín','Granada'];
-  if (!municipiosCE.includes(municipio)) return res.status(400).json({ error: 'Municipio no permitido.' });
-  
-  try {
-        const hash = await bcrypt.hash(contra, 10);
-        db.query('INSERT INTO usuarios (nombre, correo, contra, municipio) VALUES (?, ?, ?, ?)', 
-            [nombre, correo, hash, municipio], (err) => {
-            if (err) {
-                if (err.code === 'ER_DUP_ENTRY') {
-                    return res.status(409).json({ error: 'El correo electrónico ya está registrado.' });
-                }
-                console.error(err);
-                return res.status(500).json({ error: 'Error al registrar el usuario.' });
-            }
-            res.json({ message: 'Registrado' });
-        });
-    } catch (error) {
-        res.status(500).json({ error: 'Error interno en el servidor.' });
-    }
-});
-
-// LOGIN
-app.post('/login', (req, res) => {
-  const { correo, contra } = req.body;
-  db.query('SELECT * FROM usuarios WHERE correo = ?', [correo], async (err, results) => {
-    if (err) return res.status(500).json({ error: 'Error en la base de datos' });
-    if (!results || results.length === 0) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
-
-    const user = results[0];
-    const match = await bcrypt.compare(contra, user.contra);
-    
-    if (!match) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
-    
-    const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: '1h' });
-    delete user.contra; 
-    
-    res.json({ token, usuario: user });
-  });
-});
-
-// OBTENER OFERTAS (Consulta)
-app.get('/ofertas', verificarToken, (req, res) => {
-  // Se ordena por fecha de manera descendente para ver las más nuevas primero
-  db.query('SELECT * FROM ofertas ORDER BY fecha DESC', (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Error al cargar ofertas.' });
-    }
-    res.json(results || []);
-  });
-});
-
-// PUBLICAR OFERTA (Gestión)
-app.post('/ofertas', verificarToken, (req, res) => { 
-  const { titulo, empresa, municipio, descripcion } = req.body;
-  const id_empleador = req.usuarioId; // ID del usuario que publica
-
-  if (!titulo || !empresa || !municipio || !descripcion) {
-    return res.status(400).json({ error: 'Todos los campos son obligatorios' });
-  }
-
-  const sql = 'INSERT INTO ofertas (titulo, empresa, municipio, descripcion, id_empleador) VALUES (?, ?, ?, ?, ?)';
-  db.query(sql, [titulo, empresa, municipio, descripcion, id_empleador], (err, result) => {
-    if (err) {
-      console.error(err);
-      // Error común: la tabla ofertas no tiene la columna id_empleador
-      return res.status(500).json({ error: 'Error al publicar oferta. Revise el esquema SQL.' }); 
-    }
-    res.status(201).json({ message: 'Oferta publicada exitosamente', id: result.insertId });
-  });
-});
-
-
-// GESTIONAR POSTULACIÓN
-app.post('/postulaciones', verificarToken, (req, res) => {
-    const id_usuario = req.usuarioId; 
-    const { id_oferta } = req.body;
-
-    if (!id_oferta) {
-        return res.status(400).json({ error: 'ID de oferta requerida' });
-    }
-
-    db.query('SELECT * FROM postulaciones WHERE id_usuario = ? AND id_oferta = ?', 
-        [id_usuario, id_oferta], (err, results) => {
-            if (err) return res.status(500).json({ error: 'Error interno de la base de datos.' });
-            
-            if (results.length > 0) {
-                return res.status(409).json({ error: 'Ya te has postulado a esta oferta.' });
-            }
-
-            const sql = 'INSERT INTO postulaciones (id_usuario, id_oferta) VALUES (?, ?)';
-            db.query(sql, [id_usuario, id_oferta], (insertErr, result) => {
-                if (insertErr) {
-                    console.error(insertErr);
-                    // Error común: la tabla postulaciones no existe
-                    return res.status(500).json({ error: 'Error al registrar la postulación. Revise el esquema SQL.' });
-                }
-                res.status(200).json({ message: 'Postulación registrada exitosamente', id: result.insertId });
-            });
+// LOGIN CANDIDATO
+app.post('/login/candidato', (req, res) => {
+    const { correo, contra } = req.body;
+    db.query('SELECT * FROM candidatos WHERE correo = ?', [correo], (err, results) => {
+        if (err || results.length === 0 || contra !== results[0].contra)
+            return res.status(401).json({ error: 'Credenciales incorrectas' });
+        const user = results[0];
+        const token = jwt.sign({ id: user.id, tipo: 'candidato' }, SECRET_KEY, { expiresIn: '2h' });
+        delete user.contra;
+        res.json({ token, usuario: { ...user, tipo: 'candidato' } });
     });
 });
 
-
-app.listen(3000, () => {
-  console.log('SERVIDOR CORRIENDO EN http://localhost:3000');
-  console.log(' SIRVIENDO: frontend/index.html');
+// LOGIN EMPRESA
+app.post('/login/empresa', (req, res) => {
+    const { email, password } = req.body;
+    db.query('SELECT * FROM empresas WHERE email = ?', [email], (err, results) => {
+        if (err || results.length === 0 || password !== results[0].password)
+            return res.status(401).json({ error: 'Credenciales incorrectas' });
+        const empresa = results[0];
+        const token = jwt.sign({ id: empresa.id, tipo: 'empresa' }, SECRET_KEY, { expiresIn: '2h' });
+        res.json({ token, usuario: { ...empresa, tipo: 'empresa' } });
+    });
 });
+
+// REGISTRO CANDIDATO
+app.post('/registro/candidato', (req, res) => {
+    const { nombre, correo, contra, municipio } = req.body;
+    db.query('INSERT INTO candidatos (nombre, correo, contra, municipio) VALUES (?,?,?,?)',
+        [nombre, correo, contra, municipio], err => {
+            if (err) return res.status(400).json({ error: 'Correo ya registrado' });
+            res.json({ message: 'Registrado correctamente' });
+        });
+});
+
+// REGISTRO EMPRESA
+app.post('/registro/empresa', (req, res) => {
+    const { razon_social, nit, email, password, municipio, telefono } = req.body;
+    db.query('INSERT INTO empresas (razon_social, nit, email, password, municipio, telefono) VALUES (?,?,?,?,?,?)',
+        [razon_social, nit, email, password, municipio, telefono], err => {
+            if (err) return res.status(400).json({ error: 'Email o NIT ya registrado' });
+            res.json({ message: 'Empresa registrada' });
+        });
+});
+
+// OFERTAS (para candidatos)
+app.get('/ofertas', verificarToken, (req, res) => {
+    if (req.userType !== 'candidato') return res.status(403).json({ error: 'Acceso denegado' });
+    const sql = `SELECT o.*, p.estado AS estado_postulacion FROM ofertas o 
+                 LEFT JOIN postulaciones p ON o.id = p.id_oferta AND p.id_candidato = ? 
+                 ORDER BY o.fecha DESC`;
+    db.query(sql, [req.userId], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error' });
+        res.json(results);
+    });
+});
+
+// PUBLICAR OFERTA
+app.post('/ofertas', verificarToken, (req, res) => {
+    if (req.userType !== 'empresa') return res.status(403).json({ error: 'Solo empresas' });
+    const { titulo, empresa, municipio, descripcion } = req.body;
+    db.query('INSERT INTO ofertas (titulo, empresa, municipio, descripcion, id_empresa) VALUES (?,?,?,?,?)',
+        [titulo, empresa, municipio, descripcion, req.userId], (err, result) => {
+            if (err) return res.status(500).json({ error: 'Error al publicar' });
+            res.json({ message: 'Oferta publicada', id: result.insertId });
+        });
+});
+
+// POSTULARSE
+app.post('/postulaciones', verificarToken, (req, res) => {
+    if (req.userType !== 'candidato') return res.status(403).json({ error: 'Solo candidatos' });
+    const { id_oferta } = req.body;
+    db.query('INSERT INTO postulaciones (id_candidato, id_oferta) VALUES (?,?)', [req.userId, id_oferta], err => {
+        if (err) return res.status(409).json({ error: 'Ya te postulaste' });
+        res.json({ message: 'Postulación enviada' });
+    });
+});
+
+// MIS OFERTAS (empresa)
+app.get('/mis-ofertas', verificarToken, (req, res) => {
+    if (req.userType !== 'empresa') return res.status(403).json({ error: 'Solo empresas' });
+    db.query('SELECT * FROM ofertas WHERE id_empresa = ? ORDER BY fecha DESC', [req.userId], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error' });
+        res.json(results);
+    });
+});
+
+// CANDIDATOS POR OFERTA
+app.get('/postulaciones-oferta/:id', verificarToken, (req, res) => {
+    if (req.userType !== 'empresa') return res.status(403).json({ error: 'Solo empresas' });
+    const { id } = req.params;
+    db.query(`SELECT p.*, c.nombre, c.correo, c.municipio FROM postulaciones p 
+              JOIN candidatos c ON p.id_candidato = c.id WHERE p.id_oferta = ?`, [id], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error' });
+        res.json(results);
+    });
+});
+
+// ACEPTAR / RECHAZAR
+app.patch('/postulacion/:id', verificarToken, (req, res) => {
+    if (req.userType !== 'empresa') return res.status(403).json({ error: 'Solo empresas' });
+    const { id } = req.params;
+    const { estado } = req.body;
+    if (!['aceptada', 'rechazada'].includes(estado)) return res.status(400).json({ error: 'Estado inválido' });
+    db.query('UPDATE postulaciones SET estado = ? WHERE id = ?', [estado, id], (err, result) => {
+        if (err || result.affectedRows === 0) return res.status(500).json({ error: 'Error' });
+        res.json({ message: 'Estado actualizado' });
+    });
+});
+
+app.listen(3000, () => console.log('http://localhost:3000'));

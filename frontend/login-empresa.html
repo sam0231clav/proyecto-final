@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login Empresa | Empleo CE</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <h1>Empleo Corredor Ecológico</h1>
+    </div>
+  </header>
+  <main class="container">
+    <div class="card">
+      <h2>Iniciar Sesión (Empresa)</h2>
+      <form id="login-form">
+        <input type="email" id="email" placeholder="Correo empresarial" required />
+        <input type="password" id="password" placeholder="Contraseña" required />
+        <button type="submit">Entrar como Empresa</button>
+      </form>
+      <p class="link"><a href="registro-empresa.html">¿No tienes cuenta empresarial?</a> | <a href="../index.html">Volver</a></p>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('login-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('/login/empresa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('usuario', JSON.stringify(data.usuario));
+        alert('¡Bienvenida, ' + data.usuario.razon_social + '!');
+        window.location.href = 'empresa-dashboard.html';
+      } else {
+        alert(data.error || 'Error');
+      }
+    };
+  </script>
+</body>
+</html>
