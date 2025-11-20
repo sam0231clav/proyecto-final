@@ -139,4 +139,27 @@ app.patch('/postulacion/:id', verificarToken, (req, res) => {
     });
 });
 
+// ====== ELIMINAR OFERTA (solo la empresa propietaria) ======
+app.delete('/ofertas/:id', verificarToken, (req, res) => {
+    if (req.userType !== 'empresa') 
+        return res.status(403).json({ error: 'Solo empresas' });
+
+    const ofertaId = req.params.id;
+
+    // Verificamos que la oferta pertenece a la empresa logueada
+    db.query('SELECT id_empresa FROM ofertas WHERE id = ?', [ofertaId], (err, results) => {
+        if (err || results.length === 0) 
+            return res.status(404).json({ error: 'Oferta no encontrada' });
+
+        if (results[0].id_empresa !== req.userId) 
+            return res.status(403).json({ error: 'No tienes permiso para eliminar esta oferta' });
+
+        // Eliminamos la oferta (las postulaciones se eliminan en cascada por ON DELETE CASCADE)
+        db.query('DELETE FROM ofertas WHERE id = ?', [ofertaId], (err, result) => {
+            if (err) return res.status(500).json({ error: 'Error al eliminar' });
+            res.json({ message: 'Oferta eliminada correctamente' });
+        });
+    });
+});
+
 app.listen(3000, () => console.log('http://localhost:3000'));

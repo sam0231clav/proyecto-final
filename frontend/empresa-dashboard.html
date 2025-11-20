@@ -111,18 +111,23 @@
       }
 
       cont.innerHTML = ofertas.map(o => `
-        <div class="oferta-card">
-          <h4>${o.titulo}</h4>
-          <p><strong>${o.empresa}</strong> - ${o.municipio}</p>
-          <p>${o.descripcion}</p>
-          <small>Publicado el ${new Date(o.fecha).toLocaleDateString()}</small>
-          <div style="margin-top:15px">
-            <button class="btn-postular" onclick="verPostulantes(${o.id}, '${o.titulo}')" style="background:#1C3B4E">
-              Ver Postulantes
-            </button>
-          </div>
-        </div>
-      `).join('');
+  <div class="oferta-card">
+    <h4>${o.titulo}</h4>
+    <p><strong>${o.empresa}</strong> - ${o.municipio}</p>
+    <p>${o.descripcion}</p>
+    <small>Publicado el ${new Date(o.fecha).toLocaleDateString()}</small>
+    <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap">
+      <button class="btn-postular" onclick="verPostulantes(${o.id}, '${o.titulo}')" 
+              style="background:#1C3B4E">
+        Ver Postulantes
+      </button>
+      <button onclick="eliminarOferta(${o.id})" 
+              style="background:#d32f2f; color:white; border:none; padding:10px 16px; border-radius:6px; cursor:pointer">
+        Eliminar Oferta
+      </button>
+    </div>
+  </div>
+`).join('') || '<p>No has publicado ofertas aún.</p>';
     }
 
     // ABRIR MODAL CON POSTULANTES
@@ -241,6 +246,25 @@
       window.location.href = 'index.html';
     }
 
+// ====== ELIMINAR OFERTA ======
+async function eliminarOferta(idOferta) {
+  if (!confirm('¿Estás seguro de ELIMINAR esta oferta?\n\nEsta acción no se puede deshacer y también se eliminarán todas las postulaciones.')) 
+    return;
+
+  const res = await fetch(`/ofertas/${idOferta}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  const data = await res.json();
+  
+  if (res.ok) {
+    alert('Oferta eliminada correctamente');
+    cargarMisOfertas(); // recarga la lista
+  } else {
+    alert(data.error || 'Error al eliminar la oferta');
+  }
+}
     // CARGAR AL INICIO
     cargarMisOfertas();
   </script>
